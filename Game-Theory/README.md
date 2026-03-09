@@ -1,43 +1,71 @@
+# Estudio de la emergencia de cooperación en juegos entre agentes en redes espaciales 🎮🕸️
 
-# Estudio de la Emergencia de Cooperación en Redes Espaciales y Complejas 🎮🕸️
+Este proyecto investiga la dinámica de la cooperación en redes de jugadores que participan en un juego de **dilema del prisionero evolutivo**. A través de simulaciones numéricas, se analiza cómo la arquitectura de la red (redes aleatorias, complejas y de comunidades) y el parámetro de tentación $b$ influyen en la supervivencia de los cooperadores.
 
-Este proyecto analiza la dinámica evolutiva de la cooperación en poblaciones de agentes utilizando el **Dilema del Prisionero** y el **Juego de los Bienes Públicos (PGG)**. El objetivo principal es identificar cómo la arquitectura de la red y los parámetros de recompensa influyen en la supervivencia de las estrategias cooperativas frente a la deserción.
+## 👥 Autores
+* **Pablo Gaitán Ruz** - Universidad de Granada.
+* **Álvaro Manuel Balegas López** - Universidad de Granada.
 
-## 📖 Resumen del Proyecto
-El trabajo se basa en la aplicación de la teoría de juegos a sistemas complejos, explorando la transición de fase entre regímenes de cooperación total y deflexión total. Se investiga el impacto del parámetro de tentación $b$, la existencia de caos espacial y la influencia de la estructura mesoscópica (comunidades) en la red.
+**(Fecha: 26 de febrero de 2026)**.
+
+---
+
+## 📂 Estructura del Repositorio
+* **`Simulacion_Replicador.py`**: Scripts dedicados al estudio de la dinámica del replicador y el comportamiento del sistema en retículos regulares.
+* **`Redes_Complejas.py`**: Implementación de las simulaciones en redes de Erdös-Rényi (ER) y Barabási-Albert (BA).
+* **`Redes_Comunidades.py`**: Análisis de la cooperación en estructuras mesoscópicas y cálculo de la modularidad $Q$.
+* **`PGG_MonteCarlo.py`**: Simulación Monte Carlo del juego de bienes públicos (PGG) con agentes castigadores y sistemas de reputación.
+* **`TeoriaJuego_SistemasComplejos.pdf`**: Informe técnico completo con el fundamento físico-matemático y la discusión de resultados.
+
+---
 
 ## 🔬 Fundamento Teórico
 
-### Ecuación del Replicador
-La evolución temporal de las estrategias se rige por la ecuación del replicador, que relaciona la tasa de cambio de una estrategia con su éxito relativo frente a la media:
+### Matriz de Ganancias ($W$)
+El juego se rige por la siguiente matriz de beneficios, donde las filas representan la estrategia del jugador y $b$ es el parámetro de tentación de desertar:
 
+| | Cooperador (C) | Deflector (D) |
+| :--- | :---: | :---: |
+| **Cooperador (C)** | 1 | 0 |
+| **Deflector (D)** | $b$ | 0 |
+
+
+
+### Dinámica del Replicador
+Para modelar la evolución de las estrategias, se utiliza la **ecuación del replicado**, la cual describe cómo cambia la probabilidad $x_i$ de utilizar una estrategia $i$ en función de la ganancia obtenida:
 $$\dot{x}_{i}=x_{i}((Wx)_{i}-x^{T}Wx)$$
 
-Donde $W$ es la matriz de ganancias, que para el dilema del prisionero simplificado depende del parámetro de tentación $b$:
+---
 
-$$
-W = \begin{pmatrix} 1 & 0 \\ b & 0 \end{pmatrix}
-$$
+## 🌀 Análisis de Resultados
 
-[Image of the replicator equation dynamics plot]
-
-### Caracterización del Régimen Caótico
-Se ha determinado que para valores de $1.8 \le b \le 2$, el sistema entra en un régimen caótico. Para medir la sensibilidad a las condiciones iniciales, se utiliza la **distancia de Hamming normalizada** ($d_{12}$):
-
+### Régimen Caótico
+Se ha detectado un comportamiento caótico en el rango $1.8 \le b \le 2$. Para medir la sensibilidad a las condiciones iniciales, se emplea la **distancia de Hamming normalizada** ($d_{12}$) entre dos redes idénticas con una pequeña perturbación inicial:
 $$d_{12}(t)=\frac{1}{N^{2}}\sum_{i,j=1}^{N}(1-\delta_{s_{1}(i,j),s_{2}(i,j)})$$
 
-## 🕸️ Topología de Redes Complejas
-El estudio compara la evolución de la cooperación en tres tipos de arquitecturas:
-* **Erdös-Rényi (ER):** Redes aleatorias homogéneas con un umbral crítico de cooperación en $b_c \approx 1.33$.
-* **Barabási-Albert (BA):** Redes heterogéneas tipo "scale-free" donde la presencia de *hubs* facilita la propagación de la traición, reduciendo el umbral a $b_c \approx 1.17$.
-* **Redes de Comunidades:** Estructuras divididas en subredes densamente conectadas que actúan como refugios para los cooperadores, manteniendo una modularidad $Q \approx 0.70$.
 
-[Image of network modularity and clustering coefficient comparison]
 
-## 🏛️ Juego de Bienes Públicos (PGG) con Castigadores
-Se incluye una extensión del juego de bienes públicos que introduce una tercera estrategia: el **agente castigador (P)**. 
-* **Mecánica:** Los castigadores penalizan a los deflectores basándose en su reputación e historial de traición.
-* **Sinergia:** Se demuestra que la interacción entre cooperadores y castigadores crea una simbiosis que permite la extinción de los deflectores en ciertos umbrales de movilidad y castigo.
+### Topología de Red y Umbrales Críticos ($b_c$)
+El colapso de la cooperación depende drásticamente de la estructura de conexiones. Los umbrales críticos de tentación identificados son:
+* **Red Erdös-Rényi (ER):** $b_c \approx 1.33$. Es más resistente a la traición debido a su homogeneidad.
+* **Red Barabási-Albert (BA):** $b_c \approx 1.17$. La presencia de nodos muy conectados (*hubs*) acelera la difusión de la deflexión.
+* **Redes de Comunidades:** Actúan como refugios locales que retrasan el colapso de los cooperadores siempre que la modularidad sea alta ($Q \approx 0.70$).
+
+---
+
+## 🏛️ Promoción de la Cooperación (PGG)
+Se estudia el Juego de los Bienes Públicos con agentes castigadores (**P**), quienes penalizan a los deflectores basándose en su reputación.
+* [cite_start]**Simbiosis C-P:** La acción de los castigadores favorece la supervivencia de los cooperadores.
+* **Efecto de la Movilidad ($m_C$):** Se demuestra que si los cooperadores abandonan con demasiada facilidad sus comunidades para buscar protección de un castigador, se rompen los núcleos que los mantienen vivos, promoviendo paradójicamente la deflexión a largo plazo.
+
+
+
+---
 
 ## 🛠️ Requisitos
-Para ejecutar las simulaciones,
+* Python 3.x 
+* NumPy
+* Matplotlib
+* NetworkX 
+* SciPy
+* Pandas
