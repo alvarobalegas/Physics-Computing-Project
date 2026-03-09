@@ -2,7 +2,7 @@
 
 Este repositorio contiene una implementación numérica para simular la evolución temporal de una función de onda cuántica en una dimensión, resolviendo la **Ecuación de Schrödinger Dependiente del Tiempo (TDSE)**. 
 
-El proyecto fue desarrollado para la asignatura de **Computación Física**, centrándose en el análisis del comportamiento de un paquete de ondas frente a diferentes potenciales.
+El proyecto fue desarrollado para la asignatura de **Física Computacional**, centrándose en el análisis del comportamiento de un paquete de ondas frente a diferentes potenciales.
 
 ## 📂 Contenido del Repositorio
 
