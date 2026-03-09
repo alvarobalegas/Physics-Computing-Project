@@ -13,8 +13,8 @@ Este proyecto investiga la dinámica de la cooperación en redes de jugadores qu
 ## 📂 Estructura del Repositorio
 * **`Simulacion_Replicador.py`**: Scripts dedicados al estudio de la dinámica del replicador y el comportamiento del sistema en retículos regulares.
 * **`erdosbarabaniteracciones.py`**: Implementación de las simulaciones en redes de Erdös-Rényi (ER) y Barabási-Albert (BA).
-* **`Redes_Comunidades.py`**: Análisis de la cooperación en estructuras mesoscópicas y cálculo de la modularidad $Q$.
-* **`PGG_MonteCarlo.py`**: Simulación Monte Carlo del juego de bienes públicos (PGG) con agentes castigadores y sistemas de reputación.
+* **`comunidadvariable.py`**: Análisis de la cooperación en estructuras mesoscópicas y cálculo de la modularidad $Q$.
+* **`comunidadva.py`**: Simulación Monte Carlo del juego de bienes públicos (PGG) con agentes castigadores y sistemas de reputación.
 * **`TeoriaJuego_SistemasComplejos.pdf`**: Informe técnico completo con el fundamento físico-matemático y la discusión de resultados.
 
 ---
