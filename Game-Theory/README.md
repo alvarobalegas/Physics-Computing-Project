@@ -55,7 +55,7 @@ El colapso de la cooperación depende drásticamente de la estructura de conexio
 
 ## 🏛️ Promoción de la Cooperación (PGG)
 Se estudia el Juego de los Bienes Públicos con agentes castigadores (**P**), quienes penalizan a los deflectores basándose en su reputación.
-* [cite_start]**Simbiosis C-P:** La acción de los castigadores favorece la supervivencia de los cooperadores.
+* **Simbiosis C-P:** La acción de los castigadores favorece la supervivencia de los cooperadores.
 * **Efecto de la Movilidad ($m_C$):** Se demuestra que si los cooperadores abandonan con demasiada facilidad sus comunidades para buscar protección de un castigador, se rompen los núcleos que los mantienen vivos, promoviendo paradójicamente la deflexión a largo plazo.
 
 
