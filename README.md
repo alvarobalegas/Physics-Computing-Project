@@ -34,7 +34,7 @@ Simulación de una misión espacial desde la Tierra hasta Marte desarrollada par
 Para el desarrollo de estos proyectos se han empleado herramientas estándar de la computación científica:
 
 * **Lenguaje:** Python 3.x
-* **Librerías:** NumPy, SciPy, Matplotlib (Visualización), Pandas
+* **Librerías:** NumPy, SciPy, Matplotlib (Visualización), Pandas, NetworkX
 * **Métodos Numéricos:** * Integración de EDOs (Runge-Kutta 4).
   * Resolución de EDPs (Crank-Nicolson).
   * Dinámica de redes y sistemas complejos.
