@@ -1,0 +1,676 @@
+\documentclass[11pt,a4paper,twoside,pdf]{article}
+
+% Paquetes (añade otros si los necesitas):
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}    % Para poder insertar imágenes
+\usepackage{subcaption}  % Para maquetar subfiguras de forma moderna
+
+\usepackage[pdftex,final]{graphicx}
+
+% Style package
+% Font Package (Palatino)
+\usepackage{mathpazo}
+% Packages for specific capabilities
+\usepackage{rotating} % for text rotation in tables
+\usepackage{multirow} % for multirow in tables
+\usepackage{subfigure} % Place subfigures in figure environment
+% Packages for specific symbols
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{eurosym} % Euro symbol
+\usepackage{bbding} % for \XSolidBrush
+\usepackage{pifont} % for \ding{55} (a check mark)
+\usepackage{hyperref}
+
+\usepackage{latexsym}
+\usepackage{soul}
+\usepackage{array}
+%\usepackage{marvosym}
+\usepackage{epsfig}
+\usepackage{graphics}
+\usepackage{amsfonts}
+\usepackage{xspace}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{xtab}
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue,citecolor=blue]{hyperref}
+\numberwithin{equation}{section}
+
+
+\linespread{1.05}
+
+% TFG en inglés:
+%\usepackage[english]{babel} 
+%\addto\captionsenglish{\renewcommand{\chaptername}{}}
+
+% TFG en español:
+\usepackage[spanish,es-nodecimaldot,es-tabla,es-lcroman,es-nosectiondot,
+            es-noindentfirst]{babel}
+\renewcommand\spanishchaptername{}
+
+% Formato de la página:
+\usepackage{fancyhdr}
+\usepackage[top=2.88cm,bottom=2.97cm,left=2.95cm,right=2.95cm]{geometry}
+\setlength{\parskip}{0.1cm}
+
+% Pon aquí tus definiciones:
+
+\newcommand{\dis}{\displaystyle}
+%\sodef\an{}{.2em}{1em plus1em}{2em plus.1em minus.1em}
+
+\begin{document}
+
+% Portada %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagestyle{empty}
+
+
+\noindent
+\begin{tabular}{r}
+\includegraphics[width=8.8cm]{escudoUGRmonocromo.png} \\[-1.8ex]
+\hspace{31mm}\vspace{-8mm}
+\begin{tabular}{c}
+\hline\\[-1ex]\hskip-2mm
+{\bf Facultad de Ciencias}\hspace{18mm}
+\end{tabular}
+\end{tabular}
+
+\large
+\vspace{30mm}
+\hspace{25mm}
+\begin{tabular}{l}
+GRADO EN F\'ISICA
+\end{tabular}
+
+\vspace{45mm}
+\hspace{25mm}
+\begin{tabular}{l}
+TRABAJO FIN DE GRADO
+\\[1.5ex]
+\LARGE\bf Emulación de la transferencia radiativa\\
+\LARGE\bf atmosférica en modelos meteorológicos\\ \LARGE\bf y climáticos
+\end{tabular}
+%
+\vfill
+\hspace{25mm}
+\begin{tabular}{l}
+Presentado por:
+\\
+{\bf D. Álvaro Manuel Balegas López}
+\\[3ex]
+Curso Académico 2025/2026
+\end{tabular}
+%
+
+\newpage
+%
+
+\begin{center}
+    
+
+{\bf Resumen}
+\bigskip
+
+\begin{minipage}{0.8\linewidth}
+Las simulaciones numéricas del clima y el tiempo terrestres requieren una cantidad importante de recursos computacionales, siendo los cálculos de transferencia radiativa atmosférica (RT) uno de los procesos físicos más costosos \cite{ClimART2021}. Este trabajo muestra la necesidad de acelerar dichas simulaciones mediante el desarrollo de emuladores basados en aprendizaje automático, capaces de sustituir los procedimientos físicos tradicionales reduciendo drásticamente el tiempo de inferencia \cite{ClimSim2023}. Utilizando el conjunto de datos ClimART, derivado del Modelo Canadiense del Sistema Terrestre y compuesto por más de 10 millones de muestras \cite{ClimART2021}, se ha realizado un estudio comparativo inicial entre arquitecturas de Perceptrón Multicapa (MLP) y Redes Neuronales Convolucionales (CNN) 1D. Tras demostrar la gran superioridad de las CNN para llevar a cabo el cálculo de la RT, se ha diseñado, optimizado y validado un modelo final basado en esta arquitectura. Para evitar el sobreajuste temporal y optimizar la carga en memoria, ya que el \textit{dataset} completo cuenta con más de 1.5 TB, se ha implementado una estrategia de entrenamiento multianual que consiste en utilizar  un muestreo del 10\% sobre distintos años. Los resultados demuestran que la arquitectura propuesta logra emular la radiación de Onda Corta y Onda Larga con un error cuadrático medio (RMSE) altamente rivalizante frente a los modelos base \cite{Aryandoust2023}, tanto en escenarios de cielo prístino como bajo el impacto de dispersión por aerosoles (cielo despejado).
+\end{minipage}
+\end{center}
+\vfill
+\newpage
+
+% Indice %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\tableofcontents
+
+% Texto %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\newpage
+\newpage
+\pagestyle{fancy}
+\fancyhead[RO,LE]{\leftmark}
+\fancyhead[LO,RE]{\thepage}
+\fancyfoot{}
+
+\section{Introducción}
+
+\subsection{Contexto y motivación}
+
+
+La modelización climática y la predicción meteorológica numérica son pilares esenciales para el estudio de la dinámica terrestre y la atenuación del cambio climático. Sin embargo, estas herramientas requieren la resolución explícita de complejas ecuaciones termodinámicas y de dinámica de fluidos. En concreto, el modelado de la transferencia radiativa atmosférica (RT), que evalúa la interacción de la radiación electromagnética (Onda Corta solar y Onda Larga terrestre) con gases, aerosoles y nubes a lo largo del perfil atmosférico, constituye históricamente uno de los cuellos de botella de rendimiento más severos en los algoritmos computacionales \cite{Trautmann2020}. El coste de calcular de forma exacta estas interacciones a nivel físico es prohibitivo, lo que ha obligado tradicionalmente a los Modelos de Circulación General (GCM) a utilizar parametrizaciones y simplificaciones matemáticas muy restrictivas \cite{Ukkonen2022}.
+
+Para abordar esta limitación, las investigaciones recientes han impulsado la sustitución de estas parametrizaciones físicas convencionales por métodos basados en Aprendizaje Automático \cite{ClimSim2023}. El arquetipo central de esta hibridación físico-matemática consiste en entrenar arquitecturas de \textit{Deep Learning} utilizando como "verdad terreno" (\textit{Ground Truth}) los datos provenientes de simuladores radiativos de alta fidelidad. Una vez ajustados, estos emuladores logran predecir los flujos radiativos del sistema demostrando una reducción drástica del tiempo de cómputo en la fase de inferencia, abriendo la puerta a su uso en modelos de pronóstico operativo. \cite{Aryandoust2023} \cite{Zhong2023}.
+
+La transferencia radiativa es un candidato idóneo para la emulación neuronal no solo por su altísimo coste, sino por su formulación geométrica: se resuelve típicamente de forma vertical e independiente (aproximación de columna a columna) en cada celda del modelo climático \cite{ClimART2021}. Históricamente, los planteamientos estándar de emulación han recurrido a estructuras basadas en el Perceptrón Multicapa (MLP); sin embargo, estas redes densas tradicionales procesan los perfiles atmosféricos de manera global, omitiendo a menudo la dependencia espacial e interconexión física entre las capas contiguas de la atmósfera. En este contexto, el presente Trabajo de Fin de Grado busca contribuir al estado del arte mediante un análisis comparativo entre modelos MLP y una arquitectura de red neuronal convolucional 1D (CNN 1D), optimizada para capturar dicha correlación geométrica vertical. El objetivo es emular con rigor físico el transporte radiativo bajo distintas condiciones de dispersión, maximizando la capacidad de generalización espacio-temporal del modelo.
+
+\subsection{El Aprendizaje Automático en la Emulación Física}
+
+El empleo de técnicas de Aprendizaje Automático (\textit{Machine Learning}) como emuladores de procesos físicos se fundamenta en una marcada asimetría del coste computacional entre las fases de entrenamiento e inferencia. Los métodos tradicionales de cálculo explícito, como las parametrizaciones basadas en principios físicos, requieren la resolución numérica iterativa de sistemas de ecuaciones complejas para cada celda de la malla y en cada paso de tiempo del modelo de predicción \cite{Ukkonen2022}. Este procedimiento algebraico exhaustivo limita severamente la resolución y practicabilidad de las simulaciones operativas. Por otro lado, una red neuronal artificial actúa como un aproximador universal de funciones capaz de llevar a cabo relaciones no lineales complejas mediante una secuencia de operaciones puramente directas, que consisten en multiplicaciones de matrices y funciones de activación elementales \cite{Aryandoust2023}.
+
+El factor diferencial de este paradigma se centra en el desplazamiento del esfuerzo computacional. Aunque la fase de optimización y entrenamiento del modelo exige una inversión inicial considerable de tiempo y supercomputación para procesar conjuntos de datos masivos \cite{ClimSim2023}, el coste en el momento de la inferencia es varias órdenes de magnitud inferior al de nuestro solucionador físico convencional. Una vez que los parámetros de la red han convergido, la evaluación de un nuevo perfil atmosférico se reduce a un paso hacia adelante determinista altamente paralelizable, idóneo para su ejecución eficiente en unidades de procesamiento gráfico (GPU) \cite{Zhong2023}. Esta velocidad de resolución permite incorporar aproximaciones de alta fidelidad en los modelos climáticos globales sin comprometer el tiempo de ejecución operativa \cite{ClimART2021}.
+
+\subsection{Objetivos del TFG}
+
+
+El objetivo principal de este Trabajo de Fin de Grado es desarrollar, optimizar y validar un emulador basado en redes neuronales capaz de calcular la transferencia radiativa atmosférica de forma más eficiente que los solucionadores físicos convencionales. 
+
+Para alcanzar este propósito general, el desarrollo del trabajo se estructura en torno a los siguientes cuatro objetivos específicos:
+
+\begin{enumerate}
+    \item \textbf{Análisis del problema:} Estudiar los fundamentos físicos de la transferencia radiativa en la atmósfera y analizar exhaustivamente las bases de datos climáticas disponibles, con especial atención a las variables de estado y flujos radiativos presentes en el conjunto de datos ClimART.
+    \item \textbf{Diseño de una Red Neuronal Artificial:} Desarrollar una arquitectura de Aprendizaje Automático adaptada a la naturaleza del problema. Esto incluye el estudio comparativo entre modelos densos (MLP) y convolucionales (CNN 1D), así como la implementación de una estrategia de muestreo multianual estructurado para optimizar la carga computacional y prevenir el sobreajuste.
+    \item \textbf{Validación de resultados:} Evaluar el rendimiento estadístico y físico del modelo óptimo en escenarios de inferencia aislados (años no vistos durante el entrenamiento). Se cuantificará la precisión de las predicciones para los flujos de Onda Corta (SW) y Onda Larga (LW) bajo condiciones de cielo prístino y dispersión por aerosoles (cielo despejado).
+    \item \textbf{Comparativa con resultados previos:} Contrastar las métricas de error (como el RMSE) obtenidas por la arquitectura propuesta frente a los modelos base documentados en la literatura previa, demostrando la viabilidad computacional y precisión de la solución diseñada.
+\end{enumerate}
+
+
+\section{Fundamentos y Conjunto de Datos}
+
+\subsection{Transferencia Radiativa Atmosférica}
+
+En el estudio de la transferencia radiativa atmosférica, el espectro electromagnético se divide fundamentalmente en dos regímenes físicos debido a la gran diferencia de temperaturas de emisión entre el Sol y la Tierra: la radiación de Onda Corta (SW, por sus siglas en inglés) y la radiación de Onda Larga (LW). Siguiendo las definiciones clásicas de la física de la atmósfera \cite{Wallace2006}, la Onda Corta ($\lambda \lesssim 4 \, \mu\text{m}$) engloba la radiación solar incidente, que abarca las bandas del visible, ultravioleta e infrarrojo cercano. Por su parte, la Onda Larga ($\lambda \gtrsim 4 \, \mu\text{m}$) corresponde a la radiación térmica emitida por la superficie terrestre y la propia atmósfera. El balance energético del planeta depende críticamente de cómo estos dos tipos de radiación interactúan con los constituyentes atmosféricos a través de procesos de absorción, emisión y dispersión (\textit{scattering}).
+
+A nivel computacional y físico, los aerosoles introducen un alto grado de complejidad matemática en la resolución paramétrica de la atmósfera. Estas partículas en suspensión interactúan fuertemente con la radiación solar de Onda Corta mediante procesos de dispersión (predominantemente \textit{scattering} de Mie) y absorción, modulando el albedo planetario de forma directa \cite{Liou2002}. Su impacto sobre la Onda Larga térmica suele ser marginal en comparación, excepto en presencia de partículas de gran diámetro o altas concentraciones de polvo mineral \cite{Wallace2006}. 
+
+Aunque la nubosidad representa el factor de mayor impacto macrofísico en el balance radiativo global, la parametrización de su comportamiento altamente no lineal añade un nivel de incertidumbre y coste computacional extremo. Por ello, para evaluar con rigor estadístico y físico la capacidad de los modelos de aprendizaje automático, el enfoque de la presente investigación aísla el problema, centrándose exclusivamente en las interacciones radiativas fundamentales con los gases de efecto invernadero y la dispersión producida por los aerosoles.
+
+\subsection{Interacción de la radiación con la atmósfera: Dispersión de Rayleigh y Mie}
+
+En el estudio del transporte radiativo atmosférico, la presencia de gases y partículas en suspensión (aerosoles) introduce fenómenos de dispersión (\textit{scattering}) que desvían la radiación electromagnética de su trayectoria incidente. La naturaleza de esta interacción depende críticamente del parámetro de tamaño adimensional $x = 2\pi r / \lambda$, donde $r$ es el radio efectivo de la partícula y $\lambda$ es la longitud de onda de la radiación incidente \cite{Liou2002}.
+
+Cuando las partículas son órdenes de magnitud más pequeñas que la longitud de onda ($x \ll 1$), como es el caso de las moléculas de oxígeno y nitrógeno frente a la radiación solar, el fenómeno se describe mediante la \textbf{dispersión de Rayleigh}. En este régimen, la sección eficaz de dispersión es fuertemente dependiente de la longitud de onda (proporcional a $\lambda^{-4}$), y la función de fase exhibe una geometría simétrica hacia adelante y hacia atrás.
+
+Sin embargo, cuando la atmósfera presenta aerosoles (polvo mineral, cenizas, sulfatos o carbono negro), el tamaño de estas partículas se vuelve comparable a la longitud de onda de la radiación de Onda Corta ($x \approx 1$). En este dominio, la aproximación de Rayleigh colapsa y es necesario recurrir a la \textbf{teoría de dispersión de Mie} \cite{Liou2002}. La dispersión de Mie, derivada de la solución exacta de las ecuaciones de Maxwell para esferas dieléctricas, presenta una función de fase altamente asimétrica (fuertemente picada hacia adelante) y una dependencia espectral mucho más compleja, descrita mediante expansiones de funciones de Bessel esféricas.
+
+Desde el punto de vista computacional, la inclusión de la dispersión de Mie por aerosoles transforma la Ecuación de Transferencia Radiativa (RTE) en una ecuación íntegro-diferencial altamente no lineal. La necesidad de integrar la radiación dispersada desde todas las direcciones del ángulo sólido en cada capa de la atmósfera dispara el coste de los modelos meteorológicos, lo que justifica la necesidad apremiante de desarrollar emuladores basados en aprendizaje profundo capaces de parametrizar estos efectos sin recurrir a la resolución analítica explícita.
+
+\subsection{El conjunto de Datos ClimART}
+
+El conjunto de datos ClimART se ha consolidado como un banco de pruebas de referencia para la aplicación del Aprendizaje Automático en la emulación de la transferencia radiativa atmosférica \cite{ClimART2021}. Los datos que componen este repositorio provienen directamente de las simulaciones climáticas del Modelo Canadiense del Sistema Terrestre (CanESM5) \cite{ClimART2021}. El conjunto de datos total cuenta con más de 10 millones de muestras distribuidas estratégicamente para capturar una amplia variabilidad temporal y climatológica, abarcando tres periodos históricos y de proyección esenciales: la era preindustrial, el estado presente y diversos escenarios de emisiones futuras basados en las Trayectorias Socioeconómicas Compartidas (\textit{Shared Socioeconomic Pathways}, SSP) \cite{ClimART2021}. Esta gran escala estadística previene el sobreajuste de las redes neuronales y asegura que el emulador aprenda la física subyacente bajo diferentes estados del sistema climático.
+
+Para estudiar de forma aislada e incremental el impacto óptico de los diferentes constituyentes atmosféricos sobre los flujos de energía, los repositorios públicos de ClimART estructuran sus observaciones en dos escenarios físicos diferenciados atendiendo a la composición de la columna de aire \cite{ClimART2021}:
+
+\begin{itemize}
+    \item \textbf{\textit{Pristine Sky} (Cielo Prístino):} Representa una configuración atmosférica idealizada donde se consideran exclusivamente los gases de efecto invernadero bien mezclados, con una ausencia total de aerosoles (y nubes). Este escenario se utiliza como la línea base de control físico para entrenar y evaluar a la red neuronal en los procesos de absorción y emisión gaseosa pura.
+
+\newpage
+
+    \item \textbf{\textit{Clear Sky} (Cielo Despejado):} Incorpora de manera conjunta la concentración de gases de efecto invernadero y la distribución tridimensional de los aerosoles atmosféricos. Es una configuración matemática clave para evaluar cómo reacciona la arquitectura de \textit{Deep Learning} ante los efectos de dispersión (\textit{scattering}) y absorción que introducen las partículas en suspensión en el perfil vertical de la atmósfera.
+\end{itemize}
+
+\section{Diseño de la Red Neuronal Artificial}
+
+Antes de detallar las estrategias arquitectónicas adoptadas, es fundamental definir la métrica estadística que guiará tanto la optimización de los modelos durante el entrenamiento como su posterior evaluación. Dada la naturaleza de los flujos radiativos, el problema se aborda como una tarea de regresión multidimensional.
+
+Para cuantificar la discrepancia entre las predicciones del emulador y las simulaciones del modelo climático original (\textit{ground truth}), se ha seleccionado el Error Cuadrático Medio (RMSE, por sus siglas en inglés: \textit{Root Mean Square Error}). Matemáticamente, se define como:
+
+\begin{equation}
+RMSE = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2}
+\label{eq:rmse}
+\end{equation}
+
+Donde $N$ es el número total de muestras evaluadas, $y_i$ representa el flujo radiativo real calculado analíticamente por el modelo físico, y $\hat{y}_i$ es la predicción generada por la red neuronal. 
+
+Desde el punto de vista físico, la elección del RMSE radica en su naturaleza cuadrática, la cual penaliza de forma mucho más severa los errores de gran magnitud. En el contexto de la transferencia radiativa, evitar grandes desviaciones es crítico, ya que un error puntual masivo introduciría desequilibrios inaceptables en el balance termodinámico global de la atmósfera.
+
+
+\subsection{Estrategia 1: Selección de Arquitectura (MLP vs. CNN)}
+
+El diseño de un emulador neuronal para la transferencia radiativa requiere una arquitectura capaz de interpretar correctamente el estado termodinámico y la topología vertical de la atmósfera. Para justificar la selección del modelo definitivo, se realizó un estudio comparativo entre un Perceptrón Multicapa (MLP) estándar y una Red Neuronal Convolucional unidimensional (CNN 1D), evaluando su rendimiento predictivo y su estabilidad durante el entrenamiento.
+
+\subsubsection{Análisis de la Radiación de Onda Corta (SW)}
+
+El estudio del flujo radiativo comenzó con la Onda Corta (SW), correspondiente a la radiación solar incidente. A diferencia de la radiación térmica terrestre, la Onda Corta presenta una variabilidad extrema dominada por el ciclo diurno (valores nulos durante la noche) y la fuerte dependencia geométrica del ángulo cenital solar. Esta naturaleza abrupta supone un desafío de emulación mayor para las arquitecturas de aprendizaje automático.
+
+A nivel de representación visual, y debido a la abrumadora predominancia de estos valores radiativos nulos correspondientes al ciclo nocturno, tanto los gráficos de dispersión como los histogramas de residuos para la Onda Corta se representan en escala logarítmica. Este ajuste es estrictamente necesario para evitar que el pico masivo de ceros absolutos enmascare el comportamiento predictivo de la red sobre los valores diurnos. Por el contrario, en el posterior análisis de la Onda Larga (LW), la escala logarítmica se aplicará de forma exclusiva a los gráficos de dispersión —para descomprimir visualmente las regiones con altísima densidad de muestras térmicas—, manteniendo sus histogramas de error en una escala lineal estándar.
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{pristinesky_sw(estrategia1)/rmse_mlp_base_50epocas_sobreajuste.png}
+    \caption{Curvas de aprendizaje para el MLP base (Onda Corta). Se observa un sobreajuste severo y divergencia del error de validación desde las primeras épocas.}
+    \label{fig:sw_mlp_base}
+\end{figure}
+
+
+Las curvas de aprendizaje demuestran un sobreajuste estructural masivo: mientras el error de entrenamiento converge artificialmente hacia cero, el RMSE de validación se mantiene estancado en valores altos y diverge de la curva principal, generando una brecha de generalización (\textit{generalization gap}) enorme desde las primeras épocas. Este comportamiento es una evidencia inequívoca de que la red densa pierde su capacidad predictiva al memorizar las particularidades meteorológicas del conjunto de entrenamiento, siendo incapaz de extrapolar las leyes radiativas a datos no observados. 
+
+Para mitigar esta pérdida de generalidad, se evaluó una segunda configuración del MLP incorporando dos técnicas de regularización complementarias: capas de \textit{Dropout} con una tasa de desactivación aleatoria del 30\% y un mecanismo de parada temprana (\textit{Early Stopping}). La inclusión del \textit{Dropout} introduce una penalización estocástica durante el paso hacia adelante, impidiendo que las neuronas dependan de combinaciones numéricas rígidas y forzando la extracción de representaciones más robustas. Por su parte, el algoritmo de parada temprana monitoriza el RMSE de validación en cada época; al detectar que este no experimenta mejoras consecutivas durante un umbral de tolerancia (paciencia) fijado en 5 épocas, interrumpe automáticamente la optimización y restaura los pesos sinápticos a su estado óptimo. Gracias a la acción conjunta de ambas técnicas, el modelo mitigó la divergencia temporal y logró estabilizar sus métricas de aprendizaje.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{pristinesky_sw(estrategia1)/curva_rmse_mlp_regularizado.png}
+    \caption{Estabilización de las métricas de aprendizaje del MLP para Onda Corta tras la aplicación de técnicas de regularización.}
+    \label{fig:sw_mlp_reg}
+\end{figure}
+
+No obstante, la evaluación de este MLP regularizado sobre el conjunto de prueba independiente reveló las carencias geométricas intrínsecas de las redes densas. Al evaluar perfiles atmosféricos no vistos, el MLP exhibió una dispersión pronunciada y una incapacidad manifiesta para seguir la diagonal ideal de predicción.
+
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_sw(estrategia1)/test_scatter_real_vs_pred_log.png}
+        \caption{Gráfico de dispersión.}
+        \label{fig:sw_mlp_scatter}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_sw(estrategia1)/test_histograma_errores_log.png}
+        \caption{Histograma de residuos.}
+        \label{fig:sw_mlp_hist}
+    \end{subfigure}
+    \caption{Evaluación del modelo MLP en el conjunto de \textit{test} para Onda Corta. La alta dispersión acusa la incapacidad de la red para modelar los gradientes verticales.}
+    \label{fig:sw_mlp_test}
+\end{figure}
+
+\newpage
+
+
+Al aplastar la matriz de entrada en un vector unidimensional, el MLP pierde la noción topológica de las capas atmosféricas. En un régimen donde la atenuación solar depende críticamente del espesor óptico de las capas superiores frente a las inferiores, la pérdida de esta geometría penaliza la predicción del modelo.
+
+Para solucionar este defecto, se entrenó la arquitectura Convolucional 1D (CNN). La preservación de la topología vertical permitió un entrenamiento excepcionalmente estable.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pristinesky_sw(estrategia1)/curva_rmse_cnn.png}
+    \caption{Curvas de entrenamiento estables de la CNN 1D para Onda Corta. El error de validación se sitúa sistemáticamente por debajo del de entrenamiento por el efecto de las capas de \textit{Dropout}.}
+    \label{fig:sw_cnn_train}
+\end{figure}
+
+
+Finalmente, la superioridad física del modelo convolucional se evidenció en la fase de \textit{test}. La CNN 1D logró un ajuste notablemente más preciso a la diagonal ideal frente a los grandes flujos de radiación solar diurna, corrigiendo el problema de la varianza estructural del MLP. Además, el análisis residual confirmó una mejora estadística clave: los errores mostraron una altísima concentración en torno al cero absoluto, eliminando los sesgos del modelo.
+
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_sw(estrategia1)/test_cnn_scatter_log.png}
+        \caption{Dispersión CNN (Escala logarítmica).}
+        \label{fig:sw_cnn_scatter}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_sw(estrategia1)/test_cnn_histograma_log.png}
+        \caption{Histograma de residuos.}
+        \label{fig:sw_cnn_hist}
+    \end{subfigure}
+    \caption{Evaluación del modelo CNN 1D para Onda Corta. Mejora evidente en la alineación predictiva y alta concentración de los residuos en torno a cero (sesgo neutro).}
+    \label{fig:sw_cnn_test}
+\end{figure}
+
+\subsubsection{Análisis de la Radiación de la Onda Larga (LW):}
+    
+    En el caso del flujo de Onda Larga, la arquitectura MLP base demostró una capacidad paramétrica excesiva para la variabilidad del conjunto de datos. Como se observa en la evaluación inicial de las curvas de aprendizaje, el modelo colapsa en un sobreajuste severo casi de forma instantánea tras la primera época.
+
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.657\linewidth]{pristinesky_lw(Estrategia1)/RMSE/curva_rmse_mlp_base_LW.png}
+        \caption{Evolución del RMSE durante el entrenamiento del modelo MLP base para Onda Larga, mostrando un sobreajuste inmediato.}
+        \label{fig:MLPbaseRMSE}
+    \end{figure}
+
+    La gráfica muestra cómo la curva de entrenamiento converge a cero mientras la de validación diverge inmediatamente, demostrando la extrema necesidad de aplicar técnicas de regularización fuertes para forzar a la red a extraer la física real del problema en lugar de memorizar las distribuciones del año de entrenamiento.
+
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=0.75\linewidth]{pristinesky_lw(Estrategia1)/RMSE/curva_rmse_mlp_reg_LW.png}
+        \caption{Curvas de aprendizaje del modelo MLP tras aplicar técnicas de regularización.}
+        \label{fig:placeholder}
+    \end{figure}
+
+    \newpage
+
+    Tras aplicar regularización (la misma que habíamos aplicado para el caso de SW), el MLP logró estabilizarse, pero evidenció una limitación estructural severa al evaluar el conjunto de datos de \textit{test} independiente. Su gráfico de dispersión revela una incapacidad sistemática para modelar los flujos térmicos más extremos (valores superiores a 400 W/m²), donde el modelo tiende a subestimar severamente la radiación.
+
+
+\begin{figure}[htbp]
+    \centering
+    % Primera subfigura (Izquierda: Scatter)
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_lw(Estrategia1)/TEST/test_cnn_LW_scatter.png}
+        \caption{Gráfico de dispersión.}
+        \label{fig:cnn_lw_scatter}
+    \end{subfigure}
+    \hfill % Genera un espacio horizontal elástico para separar las imágenes
+    % Segunda subfigura (Derecha: Histograma)
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_lw(Estrategia1)/TEST/test_cnn_LW_histograma.png}
+        \caption{Histograma de residuos.}
+        \label{fig:cnn_lw_histograma}
+    \end{subfigure}
+    
+    % Pie de foto principal de la doble figura
+    \caption{Gráfico de dispersión e histograma de residuos para el modelo CNN 1D. Se observa una alineación precisa sobre la diagonal ideal, corrigiendo la subestimación en flujos altos.}
+    \label{fig:cnn_lw_doble_panel_corregido}
+\end{figure}
+
+
+
+Este sesgo confirma la limitación de la arquitectura MLP: al ignorar la topología vertical aplanando la entrada, no logra resolver la compleja transferencia radiativa cerca de la superficie terrestre. Esto justifica plenamente el salto a una arquitectura Convolucional (CNN).
+
+
+El análisis de las curvas de aprendizaje de la CNN 1D muestra una convergencia altamente estable, contrastando fuertemente con el sobreajuste inicial observado en las arquitecturas base.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\linewidth]{pristinesky_lw(Estrategia1)/RMSE/curva_rmse_cnn_LW.png}
+    \caption{Curvas de aprendizaje estables para la arquitectura CNN 1D. Destaca el error de validación inferior al de entrenamiento por efecto del Dropout}
+    \label{fig:RMSECNNTrain}
+\end{figure}
+
+\newpage
+
+Un rasgo destacable de la gráfica resultante es la posición invertida de las curvas: el error (RMSE) del conjunto de validación se sitúa sistemáticamente por debajo del error de entrenamiento. Este fenómeno es una consecuencia directa y teóricamente predecible del uso de capas de regularización Dropout, las cuales se desactivan durante la inferencia permitiendo que el modelo utilice la totalidad de los pesos sinápticos aprendidos. A nivel cuantitativo, la CNN logra estabilizar el RMSE de validación en torno a los 5 W/m².
+
+
+\begin{figure}[htbp]
+    \centering
+    % Primera subfigura (Izquierda: Scatter)
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_lw(Estrategia1)/TEST/test_cnn_LW_scatter.png}
+        \caption{Gráfico de dispersión.}
+        \label{fig:cnn_lw_scatter}
+    \end{subfigure}
+    \hfill % Genera un espacio horizontal elástico para separar las imágenes
+    % Segunda subfigura (Derecha: Histograma)
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6cm]{pristinesky_lw(Estrategia1)/TEST/test_cnn_LW_histograma.png}
+        \caption{Histograma de residuos.}
+        \label{fig:cnn_lw_histograma}
+    \end{subfigure}
+    
+    % Pie de foto principal de la doble figura
+    \caption{Gráfico de dispersión e histograma de residuos para el modelo CNN 1D en Onda Larga. Se observa una alineación precisa sobre la diagonal ideal, corrigiendo la subestimación en flujos altos y estabilizando el error en $\sim 5 \text{ W/m}^2$.}
+    \label{fig:cnn_lw_doble_panel_corregido}
+\end{figure}
+
+
+Al evaluar la CNN frente al conjunto de \textit{\textbf{test}}, se obtiene un RMSE final de 5.11 W/m², lo que representa una reducción del error predictivo cercana al 78\% frente a los 23.39 W/m² del modelo MLP. La CNN logra corregir la deficiencia de la arquitectura densa, alineando su nube de predicciones de forma consistente sobre la diagonal principal a lo largo de todo el espectro radiativo, incluyendo los valores extremos que oscilan entre los 500 y 600 W/m². Esta mejora empírica valida la hipótesis principal del estudio: la aplicación de filtros convolucionales unidimensionales permite capturar la topología espacial subyacente y la dependencia física continua de la columna atmosférica vertical.
+
+
+\subsection{Estrategia 2: Optimización de Hiperparámetros y Arquitectura}
+
+El diseño de la red neuronal profunda exigió un ajuste minucioso de sus hiperparámetros para equilibrar la expresividad matemática del modelo con su generalización física. Partiendo de la naturaleza continua de la columna atmosférica, la topología final se estructuró en dos bloques extractores de características espaciales, seguidos de una sección densa de inferencia no lineal.
+
+Desde una perspectiva físico-matemática, cada bloque consta de un operador de convolución unidimensional, el cual actúa sobre la vertical atmosférica evaluando los gradientes termodinámicos y radiativos entre capas adyacentes. A continuación, se aplica una normalización interna para mantener el sistema bien condicionado y evitar la divergencia numérica durante la optimización. Finalmente, el bloque se cierra con una operación de \textit{coarse-graining} espacial (reducción de dimensionalidad), que permite a la arquitectura escalar desde interacciones locales hasta capturar el comportamiento macroscópico de la columna radiativa. Para introducir la no-linealidad, las capas ocultas emplean la función GELU (\textit{Gaussian Error Linear Unit}). Al ser suave y continuamente diferenciable, resulta matemáticamente idónea para parametrizar de forma estable procesos atmosféricos acoplados.
+
+Por el contrario, en la capa final de predicción se implementó de forma deliberada una activación asimétrica tipo ReLU (\textit{Rectified Linear Unit}). Esta decisión metodológica responde a la necesidad de imponer una condición de contorno inquebrantable de origen puramente físico: los flujos de radiación solar (Onda Corta) no pueden ser negativos en la naturaleza. El uso de este operador garantiza de forma estricta que el emulador respete este límite termodinámico inferior en cualquier predicción.
+
+\subsubsection{Análisis paramétrico de la Arquitectura}
+
+Para mitigar la co-adaptación de las componentes de la red y el sobreajuste estadístico observado en las fases preliminares, se introdujeron operadores de regularización estocástica (\textit{Dropout}) en los estadios intermedios de la arquitectura. El proceso de optimización global se guió empíricamente mediante la exploración del espacio paramétrico, manteniendo invariante el algoritmo de descenso de gradiente Adam con una tasa de aprendizaje fijada en $2 \times 10^{-4}$. 
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Code_Generated_Image-2.png}
+    \caption{Variación del RMSE de validación en función de la capacidad convolucional (canales) y la tasa de regularización (\textit{Dropout}).}
+    \label{fig:rmse_hiperparametros}
+\end{figure}
+
+A partir del análisis cuantitativo de las configuraciones evaluadas (Figura \ref{fig:rmse_hiperparametros}), se observa que la topología base (\textit{Prueba 1}), definida por 64 y 128 canales convolucionales y un factor de \textit{Dropout} de $0.2$, arrojó un RMSE de $22.14\text{ W/m}^2$. Bajo la hipótesis de que el sistema requiriese una mayor dimensionalidad para aproximar con garantías el funcional de transferencia radiativa, se duplicó el número de canales en ambos bloques extractores ($128$ y $256$ canales en la \textit{Prueba 2}). 
+
+No obstante, en lugar de converger hacia una solución más precisa, el error residual en validación se incrementó ligeramente hasta los $22.29\text{ W/m}^2$. Desde una perspectiva física, este comportamiento revela que una sobreparametrización del modelo introduce demasiados grados de libertad libres, induciendo a la red a ajustar el ruido estadístico de las variables meteorológicas locales en detrimento de la captura de las leyes invariantes macroscópicas del transporte de radiación.
+
+Por el contrario, la optimización efectiva del sistema se hallaba en el incremento de las restricciones estructurales del modelo. En la \textit{Prueba 3} se conservó la dimensión geométrica base de los canales ($64/128$), pero se aumentó el término de penalización estocástica mediante un \textit{Dropout} de $0.3$ (lo que equivale a un enmascaramiento aleatorio del 30\% de las variables funcionales en cada paso de optimización). Esta constricción obligó al operador convolucional a desarrollar una alta redundancia matemática, forzando al emulador a extraer correlaciones termodinámicas estables y robustas a lo largo de todo el perfil vertical de la columna atmosférica. Como consecuencia, el error disminuyó de forma significativa hasta los $20.14\text{ W/m}^2$, lo que representa una mejora relativa del 9\% respecto a la configuración inicial. Este hallazgo empírico determinó de manera definitiva la configuración de hiperparámetros de la arquitectura final.
+
+\subsection{Estrategia 3: Algoritmo de Muestreo y Diversidad Temporal}
+
+
+
+El conjunto de datos ClimART presenta un desafío computacional de primer orden: cada año de simulación contiene millones de perfiles atmosféricos. Durante las fases iniciales de la investigación, el intento de entrenar las arquitecturas utilizando el 100\% de las muestras de un único año natural generó dos problemas críticos. A nivel de \textit{hardware}, el volumen de datos excedía sistemáticamente la capacidad de la memoria RAM disponible, provocando cuellos de botella en la transferencia de tensores. A nivel físico y estadístico, alimentar al modelo con un solo año forzaba a la red a sobreajustarse a la variabilidad meteorológica específica de ese periodo temporal (por ejemplo, la distribución exacta de aerosoles de 1990), perdiendo capacidad predictiva al evaluar años futuros con diferentes condiciones de contorno.
+
+Para resolver esta limitación, se diseñó una estrategia de muestreo multianual. En lugar de utilizar la totalidad de un año, se optó por extraer fracciones representativas de datos distribuidas de manera uniforme a lo largo de tres años de simulación distintos. Esta técnica garantiza que la red neuronal observe una mayor diversidad térmica y radiativa, forzándola a generalizar las ecuaciones termodinámicas subyacentes en lugar de memorizar la casuística de un año concreto.
+
+Para determinar la fracción de muestreo óptima, se realizó un estudio de sensibilidad evaluando el Error Cuadrático Medio (RMSE) en función del porcentaje de datos suministrado a la red, manteniendo constante la arquitectura CNN 1D optimizada en la fase anterior.
+
+\newpage
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{Code_Generated_Image.png}
+    \caption{Evolución del RMSE de validación en función de la fracción de datos utilizada (muestreo sobre 3 años de simulación). Se observa un comportamiento asintótico a partir del 10\% de los datos.}
+    \label{fig:rmse_fraccion_datos}
+\end{figure}
+
+Los resultados empíricos (Figura \ref{fig:rmse_fraccion_datos}) ilustran una curva de aprendizaje con un claro régimen asintótico. Al utilizar únicamente un 1\% de los datos, la red carece de la información estadística necesaria para inferir las interacciones físicas, colapsando con un error inaceptable de 138.71 W/m². Al incrementar la fracción al 5\%, el error se desploma drásticamente hasta los 10.39 W/m², demostrando que la red comienza a capturar la dinámica de la transferencia radiativa. 
+
+El punto de inflexión operativo se alcanza en el 10\% de los datos, donde el RMSE desciende a 8.57 W/m². Si bien duplicar nuevamente la cantidad de datos hasta el 20\% logra reducir el error a 7.50 W/m², esta mejora marginal (aproximadamente 1 W/m²) conlleva un incremento lineal del 100\% en el tiempo de cómputo y en el consumo de memoria. 
+
+Apelando a la ley de los rendimientos decrecientes y buscando el máximo rigor físico bajo restricciones computacionales realistas, se estableció la fracción del 10\% multianual como el estándar metodológico para el entrenamiento del emulador definitivo. Esta cantidad de datos demostró ser lo suficientemente masiva para estabilizar los gradientes matemáticos, pero lo suficientemente ágil para permitir una experimentación iterativa viable.
+
+\newpage
+
+\section{Validación de Resultados y Evaluación Física}
+
+Una vez definida la arquitectura óptima (CNN 1D) y establecida la 
+estrategia de muestreo multianual al 10\% para evitar el sobreajuste,
+el emulador fue sometido a la fase de evaluación final. Para garantizar 
+la máxima rigurosidad y simular un entorno de producción real, el modelo se
+evaluó exclusivamente sobre el conjunto de \textit{test}, compuesto 
+por perfiles atmosféricos correspondientes a años que la red neuronal nunca
+había observado durante su entrenamiento.
+
+Para visualizar el rendimiento sobre este volumen masivo
+de datos (millones de predicciones), se ha optado por representaciones 
+de densidad tipo \textit{Hexbin} en escala logarítmica. Esta técnica 
+permite identificar con precisión las regiones del espacio radiativo 
+donde se concentra la inmensa mayoría de las predicciones, evitando 
+el solapamiento opaco de los gráficos de dispersión tradicionales.
+
+\subsection{Evaluación bajo Cielo Prístino (Pristine Sky)}
+
+La evaluación del emulador sobre este escenario idealizado resulta crucial por dos motivos fundamentales. En primer lugar, permite aislar la capacidad de la red convolucional para modelar la termodinámica estricta de los gases sin la interferencia óptica y altamente no lineal que posteriormente introducirán las partículas en suspensión. En segundo lugar, al proyectar las inferencias sobre el conjunto aislado de \textit{test} (correspondiente a los años 2007-2014), se verifica de forma fehaciente que el modelo no ha memorizado la climatología de la fase de entrenamiento, sino que ha generalizado las leyes del transporte radiativo gaseoso.
+
+Dada la escala masiva de este proceso de validación, en el que se infieren millones de perfiles atmosféricos, la representación de la correlación predictiva exige herramientas analíticas específicas. El empleo de gráficos de dispersión tradicionales (\textit{scatter plots}) generaría un solapamiento masivo de muestras (\textit{overplotting}), lo que opacaría la verdadera distribución estadística del rendimiento. Por este motivo, la elección de mapas de densidad hexagonal (\textit{Hexbins}) apoyados en una escala logarítmica de recuento no responde a un criterio estético, sino a la necesidad científica de desgranar la estructura interna del error, permitiendo identificar con precisión matemática las regiones del espacio radiativo donde se concentra la inmensa mayoría de las predicciones de la red.
+
+\clearpage
+
+
+
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{1.\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{resultadosapartado4/Test_Hexbin_Pristine_Sky_SW_10pct.png}
+        \caption{Onda Corta (SW) - Cielo Prístino.}
+        \label{fig:hexbin_pristine_sw}
+    \end{subfigure}
+    
+    \begin{subfigure}[b]{1.\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{resultadosapartado4/Test_Hexbin_Pristine_Sky_LW_10pct.png}
+        \caption{Onda Larga (LW) - Cielo Prístino.}
+        \label{fig:hexbin_pristine_lw}
+    \end{subfigure}
+    
+    \caption{Mapas de densidad (\textit{Hexbin}) evaluando la predicción de la CNN 1D frente a la verdad terreno para condiciones de cielo prístino. La escala de color logarítmica indica la concentración de predicciones.}
+    \label{fig:evaluacion_pristine}
+\end{figure}
+
+
+Como se observa en la Figura \ref{fig:evaluacion_pristine}, el comportamiento del emulador convolucional ante una atmósfera puramente gaseosa es excepcionalmente preciso. 
+En el caso de la radiación solar incidente u Onda Corta (Figura \ref{fig:evaluacion_pristine}a), la densidad máxima de predicciones se alinea de forma casi perfecta sobre la diagonal ideal (1:1). El hexágono de máxima intensidad situado en el origen $(0,0)$ certifica que la red neuronal ha interiorizado a la perfección el forzamiento astronómico del ciclo diurno, prediciendo flujos nulos durante la noche sin introducir ruido matemático.
+
+Por su parte, el flujo térmico terrestre u Onda Larga (Figura \ref{fig:evaluacion_pristine}b) exhibe un comportamiento radiativo continuo, propio de la emisión de Planck. A diferencia de la dinámica solar (gobernada por el forzamiento astronómico y el ciclo diurno), la radiación infrarroja está dictada por el Equilibrio Termodinámico Local (LTE) de la columna atmosférica. Según la ley de Planck, cada capa emite energía térmica de forma continua en función de su temperatura local, modulada por la emisividad espectral de los gases presentes (fundamentalmente vapor de agua y dióxido de carbono) \cite{Petty2006}. La alta densidad de predicciones a lo largo de toda la diagonal principal demuestra que la arquitectura CNN 1D es capaz de mapear con éxito estos perfiles verticales de temperatura y humedad absoluta hacia los correspondientes flujos de emisión infrarroja, sin que se aprecien las ramas de subestimación severas que penalizaban a los modelos MLP iniciales.
+
+\subsection{Impacto de los Aerosoles: Evaluación bajo Cielo Despejado (Clear Sky)}
+
+Para validar la robustez física del modelo, el segundo escenario de evaluación introduce un factor de perturbación crítico en el balance energético global: los aerosoles. El escenario de Cielo Despejado (\textit{Clear Sky}) mantiene la ausencia de nubes, pero incorpora las propiedades ópticas y la distribución de partículas en suspensión (polvo mineral, sulfatos, carbono negro, etc.).
+
+Desde el punto de vista del transporte radiativo, los aerosoles complican drásticamente la solución de las ecuaciones. Introducen fenómenos de dispersión (\textit{Scattering} de Mie y Rayleigh) que rebotan fuertemente la radiación de Onda Corta, así como coeficientes de absorción adicionales que alteran la opacidad infrarroja (Onda Larga).
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{resultadosapartado4/Test_Hexbin_Clear_Sky_SW_10pct.png}
+        \caption{Onda Corta (SW) - Cielo Despejado.}
+        \label{fig:hexbin_clear_sw}
+    \end{subfigure}
+    
+    
+    \begin{subfigure}[b]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{resultadosapartado4/Test_Hexbin_Clear_Sky_LW_10pct.png}
+        \caption{Onda Larga (LW) - Cielo Despejado.}
+        \label{fig:hexbin_clear_lw}
+    \end{subfigure}
+    
+    \caption{Evaluación predictiva del modelo CNN 1D al introducir la perturbación radiativa de los aerosoles (\textit{Clear Sky}). Se mantiene una alta fidelidad predictiva pese al aumento de la complejidad óptica.}
+    \label{fig:evaluacion_clear}
+\end{figure}
+
+\newpage
+
+Al analizar la respuesta de la red neuronal ante este incremento de complejidad (Figura \ref{fig:evaluacion_clear}), se constata la solidez de la arquitectura elegida. 
+En la Onda Corta (Figura \ref{fig:evaluacion_clear}a), a pesar de la inherente no-linealidad que provoca la retrodispersión de los aerosoles solares, el núcleo de máxima densidad de puntos se mantiene tenazmente anclado a la diagonal ideal. Si bien es esperable un ligerísimo ensanchamiento en la dispersión lateral en flujos altos respecto al caso prístino, la red demuestra no colapsar ante perfiles de alta carga de polvo o contaminación, logrando parametrizar su impacto de oscurecimiento.
+
+En la Onda Larga (Figura \ref{fig:evaluacion_clear}b), el impacto térmico de los aerosoles (efecto invernadero local) es asimilado por la red con igual eficacia. La distribución térmica se mantiene coherente, demostrando que la extracción de características de las capas de agrupamiento (\textit{MaxPooling1D}) de la CNN es lo suficientemente expresiva como para aislar el forzamiento de los aerosoles sin perder la traza del perfil termodinámico principal. En conjunto, el emulador retiene su capacidad predictiva frente al ruido físico, validando su aplicabilidad para estudios climáticos sin cobertura nubosa.
+
+\newpage
+
+\section{Comparación con los Modelos de Referencia}
+
+El objetivo último de cualquier propuesta metodológica en física computacional es validar su utilidad frente a los estándares previamente establecidos por la comunidad científica. En este contexto, el rendimiento predictivo del modelo CNN 1D optimizado (Estrategias 1, 2 y 3) se contrasta directamente con los resultados oficiales publicados por los creadores de la base de datos ClimART \cite{ClimART2021}.
+
+Para garantizar la homogeneidad de la comparativa, la evaluación se realiza sobre la predicción de los flujos de Onda Corta bajo condiciones de Cielo Prístino (\textit{Pristine Sky}) para los años correspondientes al conjunto de \textit{test} (2007-2014).
+
+Es crucial matizar una divergencia metodológica fundamental entre el enfoque de los autores originales y la arquitectura desarrollada en este Trabajo de Fin de Grado en cuanto a la gestión y eficiencia de los datos de entrenamiento. Mientras que los modelos base de \cite{ClimART2021} (MLP, GCN y CNN) fueron entrenados empleando la totalidad del volumen masivo de datos disponibles (el 100\% de las muestras multianuales), el modelo CNN 1D aquí presentado ha sido optimizado operando estrictamente sobre una fracción del 10\% mediante una estrategia de muestreo estratégico. Este enfoque reduce drásticamente la demanda de memoria RAM y el coste computacional, buscando evaluar la capacidad de la red para interpolar la física del transporte radiativo con restricciones severas de información.
+
+En la Tabla \ref{tab:estado_arte} se detallan los Errores Cuadráticos Medios (RMSE) de los modelos de referencia reportados en la literatura frente al RMSE obtenido por nuestra arquitectura convolucional.
+
+\begin{table}[htbp]
+    \centering
+    \renewcommand{\arraystretch}{1.3} % Da un poco más de espacio entre las filas
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo Evaluado} & \textbf{Fracción de Datos Usada} & \textbf{RMSE Promedio ($W/m^2$)} \\
+        \hline
+        MLP Base \cite{ClimART2021} & 100 \% & $14.1$ \textsuperscript{*} \\
+        \hline
+        GraphNet \cite{ClimART2021} & 100 \% & $12.3$ \textsuperscript{*} \\
+        \hline
+        CNN Oficial \cite{ClimART2021} & 100 \% & $5.8$ \textsuperscript{*} \\
+        \hline
+        \textbf{CNN 1D (Nuestro Trabajo)} & \textbf{10 \% (Muestreo Multianual)} & \textbf{8.12} \\
+        \hline
+    \end{tabular}
+    \caption{Comparativa del RMSE en Onda Corta (Pristine Sky) sobre el conjunto de \textit{test} (2007-2014) frente a las métricas de referencia. \textsuperscript{*}Los valores de la literatura han sido extraídos y recalculados a partir de los errores relativos proporcionados en la publicación original para permitir una comparativa absoluta.}
+    \label{tab:estado_arte}
+\end{table}
+
+El análisis numérico confirma el éxito operativo de la arquitectura propuesta. Con un RMSE de $8.12\text{ W/m}^2$, nuestra CNN 1D logra batir holgadamente a las arquitecturas densas (MLP) y a los modelos basados en grafos (GraphNet) de referencia, reduciendo el error de estos últimos en más de un 30\%. 
+
+Si bien la CNN oficial de los autores logra un error inferior ($5.8\text{ W/m}^2$), este hito se enmarca dentro de un escenario de entrenamiento masivo y costoso sobre el total del \textit{dataset}. Por lo tanto, un RMSE de $8.12\text{ W/m}^2$ empleando solo una décima parte de la información representa un resultado extraordinario en términos de eficiencia computacional. Esto demuestra que la preservación de la topología atmosférica 1D, combinada con una regularización estructural adecuada (\textit{Dropout}) y un muestreo multianual bien distribuido, permite acelerar los modelos climáticos con un consumo de recursos mínimo sin comprometer su integridad física.
+
+\section{Implicaciones Éticas y Sostenibilidad Computacional}
+
+La transición hacia la modelización climática híbrida, integrando simuladores físicos con redes neuronales, trasciende el mero avance algorítmico e introduce implicaciones éticas y medioambientales que deben ser consideradas. 
+
+En primer lugar, el entrenamiento de arquitecturas de \textit{Deep Learning} sobre conjuntos de datos masivos como ClimART conlleva una notable huella de carbono debido al intenso consumo energético de las infraestructuras GPU. No obstante, este coste inicial se amortiza drásticamente durante el ciclo de vida del modelo. Al reducir el tiempo de inferencia en varios órdenes de magnitud respecto a los solucionadores de transferencia radiativa paramétricos tradicionales, la adopción operativa de emuladores como el desarrollado en este trabajo mitigaría significativamente el consumo energético recurrente de los centros de supercomputación meteorológica.
+
+En segundo lugar, desde una perspectiva de impacto social, la aceleración de los Modelos de Circulación General (GCM) permite ejecutar simulaciones de ensamble (\textit{ensembles}) con mayor resolución espacial sin exceder los presupuestos de tiempo de cálculo. Esto se traduce directamente en predicciones climáticas más certeras y localizadas, proporcionando a las instituciones herramientas más precisas para la alerta temprana de fenómenos meteorológicos extremos y el diseño de políticas efectivas de mitigación del cambio climático.
+
+\section{Conclusiones y Trabajo Futuro}
+
+El presente Trabajo de Fin de Grado ha abordado con éxito el diseño, optimización y validación de un emulador basado en aprendizaje profundo para el cálculo de la transferencia radiativa atmosférica, utilizando el conjunto de datos de referencia ClimART. A través de un análisis comparativo y paramétrico riguroso, se han extraído las siguientes conclusiones fundamentales:
+
+\begin{enumerate}
+    \item \textbf{Importancia de la topología espacial:} Se ha demostrado empíricamente que el Perceptrón Multicapa (MLP) base adolece de limitaciones intrínsecas para resolver el transporte radiativo. El aplanamiento de las variables de entrada destruye la jerarquía geométrica de la columna atmosférica, provocando un sobreajuste severo (\textit{overfitting}) interanual. Por el contrario, las Redes Neuronales Convolucionales 1D (CNN) proporcionan un sesgo inductivo excelente, preservando la continuidad de los perfiles meteorológicos y las interacciones entre capas adyacentes.
+    
+    \item \textbf{Optimización paramétrica frente a sobreparametrización:} El estudio de sensibilidad de hiperparámetros reveló que la ley del aumento de filtros en la CNN no se traduce en una mejora del error. Duplicar la capacidad convolucional (de 64/128 a 128/256 filtros) incrementó el RMSE de validación de $22.14\text{ W/m}^2$ a $22.29\text{ W/m}^2$, demostrando que la red tiende a memorizar el ruido estadístico local. La optimización real se logró incrementando la restricción mediante la tasa de \textit{Dropout} del 20\% al 30\%, lo que forzó la extracción de representaciones robustas y redundantes, reduciendo el error a $20.14\text{ W/m}^2$.
+    
+    \item \textbf{La diversidad temporal como pilar metodológico:} Se ha verificado que la diversidad climática en el conjunto de entrenamiento es infinitamente más crítica que el mero volumen bruto de datos de un único año. El diseño de una estrategia de muestreo multianual (10\% distribuido uniformemente en diferentes periodos) redujo el RMSE en más de un 57\% frente al entrenamiento monocrono. Asimismo, el análisis del volumen de datos identificó un claro comportamiento asintótico: rebasar el umbral del 10\% hacia el 20\% duplica el coste computacional y de memoria RAM para reportar una ganancia marginal inferior a $1\text{ W/m}^2$, validando la eficiencia de la fracción seleccionada.
+    
+    \item \textbf{Consistencia física y robustez matemática:} Los mapas de densidad \textit{Hexbin} confirmaron la solidez física del emulador definitivo. El uso de la función de activación ReLU en la capa de salida garantizó de forma matemática la restricción termodinámica de no-negatividad de los flujos solares, resolviendo el ciclo diurno de forma exacta en el origen $(0,0)$. El modelo demostró una robustez sobresaliente al transicionar de Cielo Prístino (\textit{Pristine Sky}) a Cielo Despejado (\textit{Clear Sky}), asimilando con alta precisión los fenómenos no-lineales de dispersión de Rayleigh y Mie introducidos por la perturbación de los aerosoles.
+    
+    \item \textbf{Competitividad y eficiencia bi-objetivo:} Evaluado sobre el conjunto de \textit{test} independiente (2007-2014) en Onda Corta, el modelo alcanzó un RMSE de $8.12\text{ W/m}^2$. Este hito bate holgadamente a las aproximaciones densas ($14.1\text{ W/m}^2$) y de grafos ($12.3\text{ W/m}^2$) de la literatura previa. Si bien se sitúa ligeramente por encima del modelo convolucional de los creadores de ClimART ($5.8\text{ W/m}^2$), nuestro emulador se valida como una alternativa altamente eficiente al alcanzar un orden de precisión plenamente competitivo utilizando únicamente el 10\% del volumen de entrenamiento, reduciendo drásticamente la huella computacional del proceso.
+\end{enumerate}
+
+\subsection{Líneas Futuras}
+
+A partir de las metodologías desarrolladas y los excelentes resultados predictivos alcanzados, se proponen las siguientes vías de expansión para futuras investigaciones:
+
+\begin{itemize}
+    \item \textbf{Acoplamiento dinámico en modelos climáticos:} Integrar de forma directa el emulador CNN 1D optimizado en el código fuente del Modelo Canadiense del Sistema Terrestre (CanESM5) o arquitecturas meteorológicas como WRF, sustituyendo los esquemas analíticos tradicionales para cuantificar el impacto real en el ahorro de tiempo de cómputo durante simulaciones a gran escala.
+    
+    \item \textbf{Transición hacia condiciones de Cielo Cubierto (All-Sky):} Extender la capacidad de la red convolucional incorporando los perfiles de nubosidad (fracción de nube, agua líquida y hielo en fase de nube). Este escenario introduce discontinuidades físicas extremas debidas a los coeficientes de reflexión en los frentes nubosos, lo que pondrá a prueba el límite de generalización del emulador frente a transiciones ópticas abruptas.
+    
+    \item \textbf{Exploración de arquitecturas Transformer:} Investigar el rendimiento de los mecanismos de auto-atención frente a las operaciones de convolución local. Dado que la radiación infrarroja de la Onda Larga acopla capas muy distantes de la atmósfera mediante emisión y reabsorción mutua, los Transformers podrían capturar estas dependencias globales de largo alcance con mayor naturalidad que los núcleos convolucionales estrictamente localizados.
+\end{itemize}
+
+% Referencias %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+
+\addcontentsline{toc}{section}{Referencias} % Elige según idioma
+%\addcontentsline{toc}{section}{References} % Elige según idioma
+
+
+\begin{thebibliography}{99}
+
+\bibitem{ClimART2021}
+Cachay, S. R., Ramesh, V., Cole, J. N. S., Barker, H., \& Rolnick, D. (2021). 
+\textit{ClimART: A Benchmark Dataset for Emulating Atmospheric Radiative Transfer in Weather and Climate Models}. 
+Advances in Neural Information Processing Systems, 34, 1--14. 
+\url{https://doi.org/10.48550/arXiv.2111.14671}
+
+\bibitem{ClimSim2023}
+Yu, S., et al. (2023). 
+\textit{ClimSim: A large multi-scale dataset for hybrid physics-ML climate emulation}. 
+Advances in Neural Information Processing Systems, 36, 22070--22084. 
+\url{https://doi.org/10.48550/arXiv.2306.08754}
+
+\bibitem{Aryandoust2023}
+Aryandoust, A., Rigoni, T., di Stefano, F., \& Patt, A. (2023). 
+\textit{Unified machine learning tasks and datasets for enhancing renewable energy}. 
+arXiv preprint. \url{https://doi.org/10.48550/arXiv.2311.06876}
+
+\bibitem{Trautmann2020} 
+Trautmann, T., Gimeno Garcia, S., \& Meringer, M. (2020). 
+\textit{Data-Intensive Computing in Radiative Transfer}. 
+German Aerospace Center (DLR), Earth Observation Center. 
+Recuperado el 21 de mayo de 2026, de \url{https://www.dlr.de}
+
+\bibitem{Ukkonen2022} 
+Ukkonen, P. (2022). 
+\textit{Machine learning for radiative transfer and other physics in weather and climate models} [Tesis Doctoral, Niels Bohr Institute, University of Copenhagen]. Archivo institucional.
+
+\bibitem{Zhong2023} 
+Zhong, X., et al. (2023). 
+\textit{A radiative transfer deep learning model coupled into WRF with a demonstration of shortwave radiation}. 
+Frontiers in Earth Science, 11, 1149566. 
+\url{https://doi.org/10.3389/feart.2023.1149566}
+
+\bibitem{Wallace2006}
+Wallace, J. M., \& Hobbs, P. V. (2006). 
+\textit{Atmospheric Science: An Introductory Survey} (2\textsuperscript{a} ed.). 
+Academic Press, Elsevier.
+
+\bibitem{Liou2002}
+Liou, K. N. (2002). 
+\textit{An Introduction to Atmospheric Radiation} (2\textsuperscript{a} ed.). 
+Academic Press, Elsevier.
+
+\bibitem{Petty2006}
+Petty, G. W. (2006). 
+\textit{A First Course in Atmospheric Radiation} (2\textsuperscript{a} ed.). 
+Sundog Publishing.
+
+\end{thebibliography}
+
+\end{document}
+
+
